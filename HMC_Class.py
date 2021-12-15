@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[116]:
 
 
 import numpy as np
+import autograd.numpy as np  # Thinly-wrapped numpy
+from autograd import grad 
 
 
-# In[155]:
+# In[117]:
 
 
 #building HMC object
 class Hamiltonian_Monte_Carlo():
 
-    
     def __init__(self, init):
         #initialise empty list to store values of x
         self.chain=[]
@@ -30,14 +31,14 @@ class Hamiltonian_Monte_Carlo():
         self.v_old = np.random.multivariate_normal(mean = np.zeros(x_dim),
                                                    cov = M
                                                   ).reshape(x_dim,1)
-        self.v_new = np.subtract(self.v_old, 0.5 * epsilon * gradient(self.x_new))
+        self.v_new = np.subtract(self.v_old, 0.5 * epsilon * -gradient(self.x_new))
         
         for _ in range(L - 1):
             self.x_new = np.add(self.x_new, epsilon * self.v_new)
-            self.v_new = np.subtract(self.v_new, epsilon * gradient(self.x_new))
+            self.v_new = np.subtract(self.v_new, epsilon * -gradient(self.x_new))
             
         self.x_new = np.add(self.x_new, epsilon * self.v_new)
-        self.v_new = np.subtract(self.v_new, 0.5 * epsilon * gradient(self.x_new))
+        self.v_new = np.subtract(self.v_new, 0.5 * epsilon * -gradient(self.x_new))
         
     def acceptance(self, log_prob):
         self.total += 1
@@ -54,86 +55,66 @@ class Hamiltonian_Monte_Carlo():
             self.chain.append(self.x_old)
         else:
             self.rejected += 1
-            
-        
-        
+                    
     #cop out to work out Metropolis-Hastings acceptance value
     def H(self, x, v, log_prob):
         E = -log_prob(x)
         K = 0.5 * np.sum(v ** 2)
         return(K+E)
-
-
-# In[156]:
-
-
-def build_HMC_chain(HMC, epsilon, L, M, n_iter, log_prob, log_prob_gradient):
-    def gradient(x): return -log_prob_gradient(x)
     
+
+
+# In[118]:
+
+
+def build_HMC_chain(HMC, epsilon, L, M, n_iter, log_prob):#, log_prob_gradient):
+    gradient = grad(log_prob)
+    #gradient = -grad(log_prob)
     for _ in range (n_iter):
         HMC.leapfrog(epsilon, L, M, gradient)
         HMC.acceptance(log_prob)
 
 
-# In[157]:
+# In[119]:
 
 
 HMC = Hamiltonian_Monte_Carlo(np.array([[5],
                                        [1]]))
 
 
-# In[158]:
-
-
-def log_prob_gradient(x): 
-    return  -x
-
-
-# In[159]:
+# In[121]:
 
 
 def log_prob(x):
-    return -0.5 * np.sum(x ** 2)
+    return -0.5 * np.sum(x ** 2.0)
 
 
-# In[160]:
+# In[122]:
 
 
 build_HMC_chain(HMC, epsilon=1.5, L=10, 
                 M = np.array([[1,0],
                              [0,1]]),
-                n_iter=100, log_prob=log_prob, 
-                log_prob_gradient=log_prob_gradient)
+                n_iter=100, log_prob=log_prob)#, 
+                #log_prob_gradient=log_prob_gradient)
 
 
-# In[161]:
+# In[123]:
 
 
 HMC.total
 
 
-# In[162]:
+# In[124]:
 
 
 HMC.accepted
 
 
-# In[163]:
+# In[125]:
 
 
 HMC.rejected
-
-
-# In[167]:
-
-
-len(HMC.chain)
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
