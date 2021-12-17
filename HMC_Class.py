@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[116]:
+# In[217]:
 
 
 import numpy as np
 import autograd.numpy as np  # Thinly-wrapped numpy
 from autograd import grad 
+import matplotlib.pyplot as plt
 
 
-# In[117]:
+# In[218]:
 
 
 #building HMC object
@@ -62,59 +63,128 @@ class Hamiltonian_Monte_Carlo():
         K = 0.5 * np.sum(v ** 2)
         return(K+E)
     
+    def prior_M_adapt(self, num_prior_samples, prior_var):
+        num_samples = len(self.chain)
+        current_var = np.cov(np.hstack(self.chain))
+        #print(current_var)
+        M = (num_samples*current_var+num_prior_samples*prior_var)/(num_samples+num_prior_samples)
+        return(M)
+    
 
 
-# In[118]:
+# In[219]:
 
 
-def build_HMC_chain(HMC, epsilon, L, M, n_iter, log_prob):#, log_prob_gradient):
+def build_HMC_chain(HMC, epsilon, L, M, n_iter, log_prob,
+                    num_prior_samples=0, prior_var=0, prior_M=False):#, log_prob_gradient):
     gradient = grad(log_prob)
     #gradient = -grad(log_prob)
     for _ in range (n_iter):
+        print(_)
+        if prior_M==True:
+            #fix current var
+            if len(HMC.chain)<2:
+                M=prior_var
+            else:
+                M = HMC.prior_M_adapt(num_prior_samples, prior_var)
+            print(M)
         HMC.leapfrog(epsilon, L, M, gradient)
         HMC.acceptance(log_prob)
 
 
-# In[119]:
+# In[220]:
 
 
 HMC = Hamiltonian_Monte_Carlo(np.array([[5],
                                        [1]]))
 
 
-# In[121]:
+# In[221]:
 
 
 def log_prob(x):
     return -0.5 * np.sum(x ** 2.0)
 
 
-# In[122]:
+# In[222]:
 
 
 build_HMC_chain(HMC, epsilon=1.5, L=10, 
                 M = np.array([[1,0],
                              [0,1]]),
-                n_iter=100, log_prob=log_prob)#, 
+                n_iter=1000, log_prob=log_prob,
+               num_prior_samples=100, prior_var=np.array([[0.001,0],
+                     [0,1]]), prior_M=True)#, 
                 #log_prob_gradient=log_prob_gradient)
 
 
-# In[123]:
+# In[223]:
 
 
 HMC.total
 
 
-# In[124]:
+# In[224]:
 
 
 HMC.accepted
 
 
-# In[125]:
+# In[225]:
 
 
 HMC.rejected
+
+
+# In[81]:
+
+
+def plot_contour(x_start, x_end, num_points):
+    x = np.linspace(x_start, x_end, num_points)
+    X, Y = np.meshgrid(x, x)
+    flattened_X = X.flatten()
+    flattened_Y = Y.flatten()
+    #getting the coordinates we want to graph across 
+    coords = []
+    for i in range(len(flattened_X)):
+        xs = flattened_X[i]
+        ys = flattened_Y[i]
+        coords.append(np.array([xs, ys]))
+    return (X, Y)
+
+
+# In[185]:
+
+
+prior_var = np.eye(50)
+
+
+# In[201]:
+
+
+init = np.ones(50).reshape(50,1)*2
+
+
+# In[202]:
+
+
+HMC = Hamiltonian_Monte_Carlo(init)
+
+
+# In[205]:
+
+
+build_HMC_chain(HMC, epsilon=0.1, L=10, 
+                M = np.array([[1,5],
+                             [5,1]]),
+                n_iter=10000, log_prob=log_prob,
+               num_prior_samples=10000, prior_var=prior_var, prior_M=True)
+
+
+# In[206]:
+
+
+HMC.accepted
 
 
 # In[ ]:
